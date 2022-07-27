@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+    // these cannot be changed from the pipeline
+    environment {
+        ENVIRONMENT='TEST'
+    }
+
+    // override possible in the pipeline
+    parameters {
+        string(name: 'NAME', defaultValue: 'Mark', description: 'Please enter your name')
+        string(name: 'SLEEP', defaultValue: '0', description: 'Enter sleep time in ms')
+        booleanParam(name: 'RunTests', defaultValue: true, description: 'Toggle this value')
+        choice(name: 'OPTION', choices: ['0', '1000', '10000'], description: 'Select how to run tests')
+        password(name: 'PASSWORD', defaultValue: 'SECRET', description: 'Enter a password')
+    }
+
+    stages {
+        stage('Stage 1') {
+            environment {
+                LOG_LEVEL='INFO'
+            }
+            steps {
+
+                sh '''
+         sleep $SLEEP
+            if $RunTests ; then
+                echo "Running tests"
+            else
+                echo "not running tests"
+            fi
+        '''
+            }
+        }
+        stage('Stage run groovy script') {
+            steps {
+                // Scripts not permitted to use new java.lang.Exception. Administrators can decide whether to approve or reject this signature.
+                //access to to java classes need to be approved in jenkins
+                script {
+                    @NonCPS
+                            value = Math.random()
+                    if (value > 0.5) {
+                        throw new Exception()
+                    }
+                }
+            }
+        }
+        stage('Stage test') {
+            steps {
+                writeFile file: 'test-results.txt', text: 'passed'
+            }
+        }
+    }
+    post {
+        success {
+            echo "build success!"
+            archiveArtifacts 'test-results.txt'
+        }
+        failure {
+            echo "build failed!"
+            archiveArtifacts 'test-results.txt'
+        }
+    }
+}
