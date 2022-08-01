@@ -87,9 +87,9 @@ docker commit [CONTAINER_ID] [new_image_name]
 some useful commands
 
 ```bash
-docker container exec -it <docker-container-name> bash  
+docker container exec -it container-name bash  
 docker container ls 
-docker logs <docker-container-name>
+docker logs container-name
 ```
 
 # Setup a local git repo
@@ -139,7 +139,7 @@ docker run --restart unless-stopped --name postgres \
   -e POSTGRES_PASSWORD=sonar 
   -d \
   -p 5432:5432 \
-  -v /var/axxerion/data/postgres-data:/var/lib/postgresql/data \
+  -v /var/data/postgres-data:/var/lib/postgresql/data \
   --net mynet 
   postgres
 ```
@@ -159,7 +159,7 @@ ERROR: Elasticsearch did not exit normally - check the logs at /opt/sonarqube/lo
 sudo sysctl -w vm.max_map_count=262144
 ```
 
-run sonarqube container
+### run sonarqube container
 
 ```bash
 docker run --restart unless-stopped \
@@ -170,7 +170,7 @@ docker run --restart unless-stopped \
   -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true \
   -d \
   --net mynet \
-  sonarqube:latest
+  mc1arke/sonarqube-with-community-branch-plugin:9.5-community
 ```
 
 open sonarqube and add the project `http://localhost:9000`
@@ -195,3 +195,48 @@ and use the ipaddress in jenkins sonarqube configuration
 
 ![img.png](img.png)
 
+
+# Upgrading sonarqube with docker image
+
+Stop and remove the existing SonarQube container 
+```bash
+docker stop sonarqube
+docker rm sonarqube
+```
+
+docker run with new version, see docker run command [above](#run-sonarqube-container)
+
+Create a backup of the database in case of an error, or want to revert to previous version!
+```bash
+#backup:
+docker exec -t db-container pg_dumpall -c -U db-user > dump_$(date +%Y-%m-%d_%H_%M_%S).sql
+#backup compressed:
+docker exec -t db-container pg_dumpall -c -U db-user | gzip > ./dump_$(date +"%Y-%m-%d_%H_%M_%S").gz
+#restore:
+cat dump.sql | docker exec -i db-container psql -U db-user -d db-name
+#restore compressed:
+gunzip < dump.sql.gz | docker exec -i db-container psql -U db-user -d db-name
+```
+
+For this example:
+```bash
+docker exec -t postgres pg_dumpall -c -U sonar > dump_$(date +%Y-%m-%d_%H_%M_%S).sql
+```
+restore:
+```bash
+cat dump.sql | docker exec -i postgres psql -U sonar -d sonar
+
+```
+
+Go to:
+```
+http://localhost:9000/setup
+```
+and follow the setup instructions to upgrade the database
+as mentioned in:
+```
+docker logs sonarqube
+```
+
+Wait till upgrade is finished and your good to go!
+Reanalyze your projects to get fresh data ;)
