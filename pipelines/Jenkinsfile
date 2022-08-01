@@ -53,7 +53,7 @@ pipeline {
             steps('SonarQube analysis') {
                 withSonarQubeEnv(credentialsId: 'sonarcubetoken',installationName: 'SonarQube') {
                     println "${env.SONAR_HOST_URL}" // this should be the docker ip
-                    sh "/home/sonar-scanner/bin/sonar-scanner -X -Dsonar.projectKey=docker_jenkins_pipeline"
+                    sh "/home/sonar-scanner/bin/sonar-scanner -X -Dsonar.projectKey=docker_jenkins_pipeline -Dsonar.branch.name=${BRANCH_NAME}"
                 }
             }
         }
