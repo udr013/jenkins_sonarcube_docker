@@ -79,6 +79,26 @@ docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 - setup admin account
 - install recommended plugins
 
+# Update jenkins container
+when updating and starting updated jenkins container, make sure it won't run the setupWizard, otherwise it will override your current settings1
+```bash
+docker run \
+--name jenkins \
+--restart unless-stopped \
+--detach \
+--network mynet \
+--env DOCKER_HOST=tcp://docker:2376 \
+--env DOCKER_CERT_PATH=/certs/client \
+--env DOCKER_TLS_VERIFY=1 \
+--env JAVA_OPTS=-Djenkins.install.runSetupWizard=false \
+--publish 8989:8080 \
+--publish 50000:50000 \
+--volume jenkins-data:/var/jenkins_home \
+--volume jenkins-docker-certs:/certs/client:ro \
+--volume "$HOME":/home \
+jenkins-blueocean:custom
+```
+
 Not really needed as we use persistent volumes:
 create new image with the latest state
 ```bash
@@ -95,7 +115,7 @@ docker logs container-name
 # Setup a local git repo
 
 ```bash
-#Create remote repo
+#Create "remote" repo
 git init --bare ~/repo/remote/docker_jenkins_pipelines.git
 
 #Create local repo
