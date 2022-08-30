@@ -260,3 +260,39 @@ docker logs sonarqube
 
 Wait till upgrade is finished and your good to go!
 Reanalyze your projects to get fresh data ;)
+
+# Setup reverse proxy with custom urls for localhost
+add the following line to /etc/hosts
+```
+127.0.0.1       jenkins.local sonar.local
+```
+
+create local.conf in $HOME/apacheconf/sites-enabled
+```xml
+<VirtualHost *:80>
+        ServerName jenkins.local
+        ProxyPass / http://docker-localhost-gateway:8989/
+        ProxyPassReverse / http://docker-localhost-gateway:8989/
+</VirtualHost>
+
+<VirtualHost *:80>
+        ServerName sonar.local
+        ProxyPass / http://docker-localhost-gateway:9000/
+        ProxyPassReverse / http://docker-localhost-gateway:9000/
+</VirtualHost>
+```
+
+run reverse proxy container
+```bash
+docker run --restart unless-stopped \
+  --name local-proxy \
+  --network=mynet \
+  --add-host docker-localhost-gateway:$(docker inspect -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' mynet) \
+  -p 80:80 \
+  -p 443:443 \
+  -d \
+  -v $HOME/apachelocal/sites-enabled:/etc/apache2/sites-enabled \
+  -v $HOME/apachelocal/certs:/etc/apache2/certs \
+  -v $HOME/apachelocal/log/httpd:/var/log/httpd \
+  jubba/apache2-reverse-proxy
+```
